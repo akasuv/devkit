@@ -1,0 +1,25 @@
+{
+  "name": "@akasuv/devkit",
+  "version": "0.0.2",
+  "description": "Development toolkit for SUV personal use. ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "devkit": "index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akasuv/devkit.git"
+  },
+  "author": "Chris Su",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/akasuv/devkit/issues"
+  },
+  "homepage": "https://github.com/akasuv/devkit#readme",
+  "devDependencies": {
+    "prettier": "^2.2.1"
+  }
+}
