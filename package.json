@@ -1,9 +1,10 @@
 {
   "name": "@akasuv/devkit",
-  "version": "0.0.2",
+  "version": "0.0.3-0",
   "description": "Development toolkit for SUV personal use. ",
   "main": "index.js",
   "scripts": {
+    "release": "standard-version",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
@@ -20,6 +21,7 @@
   },
   "homepage": "https://github.com/akasuv/devkit#readme",
   "devDependencies": {
-    "prettier": "^2.2.1"
+    "prettier": "^2.2.1",
+    "standard-version": "^9.1.0"
   }
 }
