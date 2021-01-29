@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.4](https://github.com/akasuv/devkit/compare/v0.0.3...v0.0.4) (2021-01-29)
+
+
+### Bug Fixes
+
+* move prettier from dev deps to deps ([41d1887](https://github.com/akasuv/devkit/commit/41d1887e0f1fd1d9277fcd4f1b33e3a1799186ea))
+
 ### [0.0.3](https://github.com/akasuv/devkit/compare/v0.0.3-0...v0.0.3) (2021-01-29)
 
 ### 0.0.3-0 (2021-01-29)

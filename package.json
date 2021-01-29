@@ -1,6 +1,6 @@
 {
   "name": "@akasuv/devkit",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Development toolkit for SUV personal use. ",
   "main": "index.js",
   "scripts": {
