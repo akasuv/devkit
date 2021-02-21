@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "devkit": "index.js"
+    "fffa": "index.js"
   },
   "repository": {
     "type": "git",
@@ -24,6 +24,8 @@
     "standard-version": "^9.1.0"
   },
   "dependencies": {
+    "axios": "^0.21.1",
+    "chalk": "^4.1.0",
     "inquirer": "^7.3.3",
     "minimist": "^1.2.5",
     "ora": "^5.3.0",

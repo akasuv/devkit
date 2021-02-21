@@ -5,108 +5,155 @@ const prettier = require("prettier");
 const util = require("util");
 const minimist = require("minimist");
 const inquirer = require("inquirer");
-const Ora = require("ora");
+const ora = require("ora")();
+const axios = require("axios");
 
-(function () {
-  const validOptions = ["_", "generate"];
-
+function devkit() {
   const options = minimist(process.argv.slice(2));
+  if (options["_"].length > 1) {
+    console.log("fffa [<absolute path> | <relative path> | <url>]");
+    return;
+  }
+  const path = options["_"][0];
 
-  if (Object.keys(options).length === 1) {
-    console.log("Please input command options");
+  if (path) {
+    loadConfig({ path });
+  } else {
+    console.log("fffa [<absolute path> | <relative path> | <url>]");
   }
 
-  if (Object.keys(options).some((item) => !validOptions.includes(item))) {
-    console.log("command not found");
+  function loadConfigByLocalPath(path, dest) {
+    const data = fs.readFileSync(path, "utf8");
+    fs.writeFileSync(dest, data);
+    ora.succeed("File saved at: " + dest);
+  }
+  function loadConfigByUrl(url, dest) {
+    const rawUrl = url
+      .replace("//github.com/", "//raw.githubusercontent.com/")
+      .replace("/blob/", "/");
+
+    ora.start("loading...");
+    axios.get(rawUrl).then((res) => {
+      const contentType = res.headers["content-type"].split(";")[0];
+      if (contentType === "text/plain") {
+        fs.writeFileSync(dest, res.data);
+        ora.succeed("File saved at: " + dest);
+      } else {
+        ora.fail("File not exist, please check the url ");
+      }
+    });
   }
 
-  const handleGeneration = (value) => {
-    const types = {
-      config: generationConfigFile,
-    };
+  function getPathType(path) {
+    const checkIsAbsolutePath = (path) => /^(\/([a-z]|[A-Z])+)+/.test(path);
+    const checkIsRelativePath = (path) => /^(\.|\..)\/.+/.test(path);
+    const checkIsLocalPath = (path) =>
+      checkIsAbsolutePath(path) || checkIsRelativePath(path);
+    const checkIsUrl = (path) =>
+      /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/.test(
+        path
+      );
 
-    return types[value] ? types[value]() : null;
-  };
+    if (checkIsLocalPath(path)) {
+      return "local";
+    }
+    if (checkIsUrl(path)) {
+      return "url";
+    }
+    return null;
+  }
 
-  if (options.generate) {
-    const generateValues = ["config"];
-    if (generateValues.includes(options.generate)) {
-      handleGeneration(options.generate);
-    } else {
-      console.log(`devkit can't generate ${options.generate}`);
+  // Load config
+  function loadConfig(options) {
+    const { path, dest = "" } = options;
+    const pathType = getPathType(path);
+    const generator = dest
+      ? generateConfig
+      : withFilenameInquirer(generateConfig);
+
+    if (pathType === null) {
+      console.log("Invalid path type");
+      return;
+    }
+    if (pathType === "local" && validateLocalPath(path)) {
+      generator(path, loadConfigByLocalPath, dest);
+      return;
+    }
+    if (pathType === "url") {
+      const rawUrl = path
+        .replace("//github.com/", "//raw.githubusercontent.com/")
+        .replace("/blob/", "/");
+
+      ora.start("checking...");
+      axios
+        .get(rawUrl)
+        .then((res) => {
+          ora.stop();
+          const contentType = res.headers["content-type"].split(";")[0];
+          if (contentType === "text/plain") {
+            generator(path, loadConfigByUrl, dest);
+          } else {
+            ora.fail("File not exist, please check the url ");
+          }
+        })
+        .catch(() => {
+          ora.fail("URL not exist, please check the url");
+        });
     }
   }
 
-  function generationConfigFile() {
+  function validateLocalPath(path) {
+    try {
+      fs.statSync(path);
+      return true;
+    } catch (error) {
+      ora.fail("no such file, please check the path");
+    }
+  }
+
+  function generateConfig(sourcePath, loader, dest) {
+    loader(sourcePath, dest);
+  }
+
+  function getDefaultFilename(path) {
+    return `${path.split("/").pop()}`;
+  }
+
+  function withFilenameInquirer(callback) {
+    return (...args) => {
+      const defaultName = getDefaultFilename(args[0]);
+
+      inquirer
+        .prompt({
+          name: "filename",
+          type: "input",
+          message: "change filename (press enter to skip):",
+          default: defaultName,
+        })
+        .then((answers) => {
+          const dest = `./${answers.filename}`;
+          try {
+            if (fs.statSync(dest)) {
+              withOverrideConfirm(() => callback(...args.slice(0, 2), dest));
+            }
+          } catch {
+            callback(...args.slice(0, 2), dest);
+          }
+        });
+    };
+  }
+
+  function withOverrideConfirm(callback) {
     inquirer
       .prompt({
-        name: "configChoice",
-        type: "list",
-        message: "choose configs:",
-        choices: ["all (prettier, eslint)", "prettier", "eslint"],
+        name: "override",
+        type: "confirm",
+        message: "File already exists, do you want to override?",
       })
       .then((answers) => {
-        if (answers.configChoice === "all (prettier, eslint)") {
-          const filenames = ["prettier", "eslint"];
-
-          const existedFiles = filenames.filter((item) =>
-            fs.existsSync(`./.${item}rc.js`)
-          );
-
-          filenames
-            .filter((item) => !fs.existsSync(`./.${item}rc.js`))
-            .forEach(writeFile);
-
-          if (existedFiles.length) {
-            inquirer
-              .prompt({
-                name: "overrideCheck",
-                type: "checkbox",
-                message:
-                  "These files already exist, check files below you want to override:",
-                choices: existedFiles,
-              })
-              .then((check) => {
-                check.overrideCheck.forEach(writeFile);
-              });
-          }
-        } else {
-          if (fs.existsSync(`./.${answers.configChoice}rc.js`)) {
-            inquirer
-              .prompt({
-                name: "overrideConfirm",
-                type: "confirm",
-                message: `.${answers.configChoice}rc.js already exists, do you want to override?`,
-              })
-              .then((confirm) => {
-                if (confirm.overrideConfirm) {
-                  writeFile(answers.configChoice);
-                }
-              });
-          } else writeFile(answers.configChoice);
-        }
+        answers.override && callback();
       });
   }
+}
 
-  function writeFile(name) {
-    const spinner = new Ora({
-      text: `Generating .${name}rc.js `,
-    });
-
-    spinner.start();
-    fs.writeFile(
-      `./.${name}rc.js`,
-      prettier.format(
-        `module.exports = ${util.inspect(config[name], {
-          depth: Infinity,
-        })}`,
-        { parser: "babel" }
-      ),
-      (err) => {
-        if (!err) {
-          spinner.succeed(`${name}rc.js generated!`);
-        }
-      }
-    );
-  }
-})();
+devkit();
